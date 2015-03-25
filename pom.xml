@@ -68,8 +68,8 @@
     <sonar.version>5.0.1</sonar.version>
     <oltu.version>1.0.0</oltu.version>
     <license.mailto>dev@sonar.codehaus.org</license.mailto>
-    <license.name>GNU LGPL 3</license.name>
-    <license.owner>SonarSource</license.owner>
+    <license.name>Apache2</license.name>
+    <license.owner>Deven Phillips</license.owner>
     <license.title>SonarQube OAuth2 Plugin</license.title>
     <license.year>2015</license.year>
   </properties>

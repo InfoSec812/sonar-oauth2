@@ -1,21 +1,17 @@
 /*
- * SonarQube OAuth2 Plugin
- * Copyright (C) 2015 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright 2015, Joseph "Deven" Phillips
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.sonar.plugins.oauth2;
 
@@ -25,6 +21,9 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -36,8 +35,10 @@ import org.sonar.api.web.ServletFilter;
  */
 @Slf4j
 public class OAuth2AuthenticationFilter extends ServletFilter {
+
+  public static final String USER_ATTRIBUTE = "sonar.oauth.user";
   
-  private OAuth2Client client;
+  final private OAuth2Client client;
 
   public OAuth2AuthenticationFilter(OAuth2Client client) {
     this.client = client;
@@ -55,11 +56,16 @@ public class OAuth2AuthenticationFilter extends ServletFilter {
 
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-    try {
-      OAuthClientRequest req = client.getClientRequest();
-      
-    } catch (OAuthSystemException ex) {
-      LOG.error("Error creating OAuthClientRequest", ex);
+    HttpSession session = ((HttpServletRequest) request).getSession(true);
+    if (session.getAttribute(USER_ATTRIBUTE)==null) {   // TODO: Check session state for an existing OAuth code/refresh token
+      try {
+        OAuthClientRequest req = client.getClientRequest();
+        ((HttpServletResponse) response).sendRedirect(req.getLocationUri());
+      } catch (OAuthSystemException ex) {
+        LOG.error("Error creating OAuthClientRequest", ex);
+      }
+    } else {
+      chain.doFilter(request, response);
     }
   }
 

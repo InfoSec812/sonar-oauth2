@@ -1,21 +1,17 @@
 /*
- * SonarQube OAuth2 Plugin
- * Copyright (C) 2015 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright 2015, Joseph "Deven" Phillips
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.sonar.plugins.oauth2;
 
@@ -33,16 +29,16 @@ import org.sonar.api.ServerExtension;
 public class OAuth2Client implements ServerExtension {
     
   public static final String PROPERTY_SONAR_URL = "sonar.oauth2.sonarServerUrl";
-  public static final String PROPERTY_OAUTH2_PROVIDER = "sonar.oauth2.provider";
-  public static final String PROPERTY_OAUTH2_CLIENT_ID = "sonar.oauth2.clientid";
-  public static final String PROPERTY_OAUTH2_LOCATION = "sonar.oauth2.location";
-  public static final String PROPERTY_OAUTH2_CLIENT_SECRET = "sonar.oauth2.secret";
+  public static final String PROPERTY_PROVIDER = "sonar.oauth2.provider";
+  public static final String PROPERTY_CLIENT_ID = "sonar.oauth2.clientid";
+  public static final String PROPERTY_LOCATION = "sonar.oauth2.location";
+  public static final String PROPERTY_SECRET = "sonar.oauth2.secret";
 
   static final String OAUTH2_SCOPE_EMAIL = "email";
   
   OAuthProviderType providerType = null;
-  
-  AuthenticationRequestBuilder reqBuilder = null;
+  AuthenticationRequestBuilder redirReqBuilder = null;
+  String clientSecret = null;
 
   /**
    * Default constructor. Accepts Sonar {@link Settings} in order to bootstrap
@@ -51,28 +47,33 @@ public class OAuth2Client implements ServerExtension {
    * @throws OAuthSystemException If there is insufficient or conflicting configurations.
    */
   public OAuth2Client(Settings settings) throws OAuthSystemException {
-    final String provider = settings.getString(PROPERTY_OAUTH2_PROVIDER);
+    final String provider = settings.getString(PROPERTY_PROVIDER);
     if (provider!=null) {
       providerType = OAuthProviderType.valueOf(provider.toUpperCase());
     }
     String authLocation;
     if (providerType==null) {
-      authLocation = settings.getString(PROPERTY_OAUTH2_LOCATION);
+      authLocation = settings.getString(PROPERTY_LOCATION);
       if (authLocation==null) {
         throw new OAuthSystemException("You must specify either an OAuth2 "
               + "provider or an authentication location.");
       }
-      reqBuilder = OAuthClientRequest.authorizationLocation(authLocation);
+      redirReqBuilder = OAuthClientRequest.authorizationLocation(authLocation);
     } else {
-      reqBuilder = OAuthClientRequest.authorizationProvider(providerType);
+      redirReqBuilder = OAuthClientRequest.authorizationProvider(providerType);
     }
     final String baseUrl = settings.getString(PROPERTY_SONAR_URL);
+    final String clientId = settings.getString(PROPERTY_CLIENT_ID);
+    clientSecret = settings.getString(PROPERTY_SECRET);
+    if (baseUrl==null || clientId==null || clientSecret==null) {
+      throw new OAuthSystemException("'"+PROPERTY_SONAR_URL+"', '"+PROPERTY_CLIENT_ID+"', AND '"+PROPERTY_SECRET
+            +"' MUST be set to configure OAuthClientRequest.");
+    }
     final String callback = baseUrl+(baseUrl.endsWith("/")?"":"/")+"oauth2/callback";
-    final String clientId = settings.getString(PROPERTY_OAUTH2_CLIENT_ID);
-    reqBuilder
+    redirReqBuilder
               .setClientId(clientId)
               .setScope(OAUTH2_SCOPE_EMAIL);
-    reqBuilder.setRedirectURI(callback);
+    redirReqBuilder.setRedirectURI(callback);
   }
   
   /**
@@ -82,6 +83,6 @@ public class OAuth2Client implements ServerExtension {
    * @throws OAuthSystemException If there is insufficient or conflicting configurations.
    */
   public OAuthClientRequest getClientRequest() throws OAuthSystemException {
-      return reqBuilder.buildQueryMessage();
+      return redirReqBuilder.buildQueryMessage();
   }
 }
