@@ -19,8 +19,10 @@ import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
 import org.apache.oltu.oauth2.client.request.OAuthClientRequest.AuthenticationRequestBuilder;
 import org.apache.oltu.oauth2.common.OAuthProviderType;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.sonar.api.config.Settings;
 import org.sonar.api.ServerExtension;
+import org.sonar.api.security.UserDetails;
 
 /**
  *
@@ -31,7 +33,8 @@ public class OAuth2Client implements ServerExtension {
   public static final String PROPERTY_SONAR_URL = "sonar.oauth2.sonarServerUrl";
   public static final String PROPERTY_PROVIDER = "sonar.oauth2.provider";
   public static final String PROPERTY_CLIENT_ID = "sonar.oauth2.clientid";
-  public static final String PROPERTY_LOCATION = "sonar.oauth2.location";
+  public static final String PROPERTY_AUTH_LOCATION = "sonar.oauth2.authLocation";
+  public static final String PROPERTY_TOKEN_LOCATION = "sonar.oauth2.tokenLocation";
   public static final String PROPERTY_SECRET = "sonar.oauth2.secret";
 
   static final String OAUTH2_SCOPE_EMAIL = "email";
@@ -39,6 +42,9 @@ public class OAuth2Client implements ServerExtension {
   OAuthProviderType providerType = null;
   AuthenticationRequestBuilder redirReqBuilder = null;
   String clientSecret = null;
+  Settings settings = null;
+  String authLocation = null;
+  String tokenLocation = null;
 
   /**
    * Default constructor. Accepts Sonar {@link Settings} in order to bootstrap
@@ -47,21 +53,23 @@ public class OAuth2Client implements ServerExtension {
    * @throws OAuthSystemException If there is insufficient or conflicting configurations.
    */
   public OAuth2Client(Settings settings) throws OAuthSystemException {
+    this.settings = settings;
     final String provider = settings.getString(PROPERTY_PROVIDER);
     if (provider!=null) {
       providerType = OAuthProviderType.valueOf(provider.toUpperCase());
     }
-    String authLocation;
     if (providerType==null) {
-      authLocation = settings.getString(PROPERTY_LOCATION);
+      authLocation = settings.getString(PROPERTY_AUTH_LOCATION);
+      tokenLocation = settings.getString(PROPERTY_TOKEN_LOCATION);
       if (authLocation==null) {
         throw new OAuthSystemException("You must specify either an OAuth2 "
               + "provider or an authentication location.");
       }
-      redirReqBuilder = OAuthClientRequest.authorizationLocation(authLocation);
     } else {
-      redirReqBuilder = OAuthClientRequest.authorizationProvider(providerType);
+      authLocation = providerType.getAuthzEndpoint();
+      tokenLocation = providerType.getTokenEndpoint();
     }
+    redirReqBuilder = OAuthClientRequest.authorizationLocation(authLocation);
     final String baseUrl = settings.getString(PROPERTY_SONAR_URL);
     final String clientId = settings.getString(PROPERTY_CLIENT_ID);
     clientSecret = settings.getString(PROPERTY_SECRET);
@@ -84,5 +92,16 @@ public class OAuth2Client implements ServerExtension {
    */
   public OAuthClientRequest getClientRequest() throws OAuthSystemException {
       return redirReqBuilder.buildQueryMessage();
+  }
+  
+  public OAuthClientRequest getTokenClientRequest(UserDetails user, String code) throws OAuthSystemException {
+      OAuthClientRequest request = OAuthClientRequest
+                                                    .tokenLocation(tokenLocation)
+                                                    .setGrantType(GrantType.PASSWORD)
+                                                    .setClientId(settings.getString(PROPERTY_CLIENT_ID))
+                                                    .setRedirectURI(settings.getString(PROPERTY_SONAR_URL)+"/oauth/callback")
+                                                    .setCode(code)
+                                                    .buildQueryMessage();
+      return request;
   }
 }

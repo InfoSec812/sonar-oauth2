@@ -32,7 +32,7 @@ import org.sonar.api.SonarPlugin;
             + "LINKEDIN, MICROSOFT, PAYPAL, REDDIT, SALESFORCE, YAMMER)"),
     @Property(key=OAuth2Client.PROPERTY_CLIENT_ID, name="OAuth2 Client ID"),
     @Property(key=OAuth2Client.PROPERTY_SECRET, name="OAuth2 Client Secret"),
-    @Property(key=OAuth2Client.PROPERTY_LOCATION, name="Authorization URL (Use if predefined OAuth2 "
+    @Property(key=OAuth2Client.PROPERTY_AUTH_LOCATION, name="Authorization URL (Use if predefined OAuth2 "
             + "provider is not listed).")
 })
 public class OAuth2Plugin extends SonarPlugin {

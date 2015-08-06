@@ -19,13 +19,13 @@ import org.sonar.api.security.Authenticator;
 
 /**
  *
- * @author <a href="">Deven Phillips</a>
+ * @author <a href="https://github.com/InfoSec812">Deven Phillips</a>
  */
 public class OAuth2Authenticator extends Authenticator {
 
     @Override
     public boolean doAuthenticate(Context context) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return context.getRequest().getAttribute(OAuth2AuthenticationFilter.USER_ATTRIBUTE) != null;
     }
 
 }

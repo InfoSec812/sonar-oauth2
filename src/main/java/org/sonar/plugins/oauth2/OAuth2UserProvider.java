@@ -15,12 +15,18 @@
  */
 package org.sonar.plugins.oauth2;
 
+import static org.sonar.plugins.oauth2.OAuth2AuthenticationFilter.USER_ATTRIBUTE;
 import org.sonar.api.security.ExternalUsersProvider;
+import org.sonar.api.security.UserDetails;
 
 /**
- *
- * @author <a href="">Deven Phillips</a>
+ * 
+ * @author <a href="https://github.com/InfoSec812">Deven Phillips</a>
  */
 public class OAuth2UserProvider extends ExternalUsersProvider {
 
+  @Override
+  public UserDetails doGetUserDetails(Context context) {
+    return (UserDetails) context.getRequest().getAttribute(USER_ATTRIBUTE);
+  }
 }
